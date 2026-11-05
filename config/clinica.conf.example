@@ -1,0 +1,18 @@
+# Copie este arquivo para "clinica.conf" na pasta de onde você executa o programa.
+# Variáveis de ambiente CLINICA_* (CLINICA_DB_PASS, etc.) têm prioridade sobre este arquivo.
+
+# Onde guardar os dados: mariadb ou csv. Se vazio: mariadb (se o build tiver suporte), senão csv.
+storage  = mariadb
+
+# --- MariaDB / MySQL ---
+db_host  = 127.0.0.1
+db_port  = 3306
+db_user  = root
+db_pass  = SUA_SENHA_AQUI
+db_name  = Sistema_de_Gerenciamento_de_consultas
+
+# --- CSV ---
+csv_path = clinica_dados.csv
+
+# Menu só com caracteres ASCII (útil em consoles antigos do Windows): true/false
+ascii    = false

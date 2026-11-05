@@ -1,0 +1,17 @@
+# Banco MariaDB pronto para uso (Docker ou Podman):
+#   docker compose up -d        |   podman-compose up -d
+# O esquema (sql/schema.sql) é aplicado automaticamente na primeira inicialização.
+services:
+  mariadb:
+    image: docker.io/library/mariadb:11
+    container_name: clinica-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${CLINICA_DB_PASS:-clinica123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - clinica-dados:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro,z
+volumes:
+  clinica-dados:
