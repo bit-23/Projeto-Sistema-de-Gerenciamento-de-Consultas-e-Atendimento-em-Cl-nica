@@ -1,258 +1,217 @@
 # 🏥 Sistema de Gerenciamento de Consultas e Atendimento em Clínica
 
-Aplicação de terminal em **C++17** que gerencia uma **Pilha de Consultas (LIFO)** e uma
-**Fila de Atendimento (FIFO)**, implementadas do zero com listas simplesmente encadeadas.
-Os dados podem ser guardados em **MariaDB/MySQL** ou em um **arquivo CSV**.
+Aplicação de terminal em **C++17**, em um único arquivo e usando só a biblioteca padrão, que
+gerencia as consultas e o atendimento de uma clínica com três estruturas de dados
+implementadas do zero:
 
-Funciona em **Linux, macOS e Windows**, com o mesmo menu interativo navegável por setas.
+- **Consultas agendadas**: lista duplamente encadeada, sempre ordenada por horário.
+- **Fila de espera**: fila (FIFO) de pacientes aguardando atendimento.
+- **Histórico de operações**: pilha (LIFO) com tudo o que foi feito na sessão.
+
+Os dados de consultas e da fila podem ser salvos e carregados de um arquivo **CSV**.
+Não há banco de dados nem dependências externas.
 
 ```
 =======================================
-       SISTEMA DE GESTÃO CLÍNICA
+     SISTEMA DE GESTAO DE CLINICA
 =======================================
-Use as setas (▲/▼) para navegar e Enter para confirmar:
-
-  ➔  1. Adicionar Consulta (Pilha)
-     2. Remover Consulta (Pilha)
-     3. Mostrar Consultas
-     4. Carregar Dados do MariaDB
-     5. Salvar Dados no MariaDB
-     6. Gerenciar Pilha
-     7. Gerenciar Fila
-     8. Sair do Programa
-
-=======================================
-Pilha: 2  |  Fila: 1  |  Dados: MariaDB  [não salvo]
+  1. Agendar consulta
+  2. Cancelar consulta
+  3. Mostrar consultas agendadas
+  4. Adicionar paciente a fila de espera
+  5. Chamar proximo paciente (atender)
+  6. Mostrar fila de espera
+  7. Gerar relatorio
+  8. Mostrar historico de operacoes
+  9. SALVAR dados em arquivo CSV
+ 10. CARREGAR dados de arquivo CSV
+  0. Sair
+---------------------------------------
+  Consultas: 2 | Atendimentos: 1
+---------------------------------------
+  Escolha uma opcao:
 ```
 
 ## Índice
 
 - [Recursos](#recursos)
 - [Requisitos](#requisitos)
-- [Instalação e compilação](#instalação-e-compilação)
-  - [Linux](#linux)
-  - [macOS](#macos)
-  - [Windows](#windows)
-- [Configuração](#configuração)
-- [Banco de dados (MariaDB)](#banco-de-dados-mariadb)
+- [Compilação e execução](#compilação-e-execução)
 - [Como usar](#como-usar)
+- [Arquivo CSV](#arquivo-csv)
 - [Estrutura do projeto](#estrutura-do-projeto)
-- [Estruturas de dados e eficiência](#estruturas-de-dados-e-eficiência)
+- [Estruturas de dados](#estruturas-de-dados)
+- [Limitações conhecidas](#limitações-conhecidas)
 - [Solução de problemas](#solução-de-problemas)
 
 ## Recursos
 
-- Menu interativo com **setas ▲/▼**, **Enter**, atalhos numéricos (**1–8**) e **Esc** para voltar.
-- **Pilha** de consultas: empilhar, desempilhar, ver topo, esvaziar.
-- **Fila** de atendimento: adicionar paciente, chamar o próximo, ver o próximo, listar, esvaziar.
-- **Dois modos de armazenamento**: MariaDB/MySQL ou CSV (escolhido automaticamente conforme o build).
-- Nomes com **espaços e acentos** (ex.: `João da Silva`).
-- Indicador na barra de status de **alterações não salvas** e confirmação ao sair.
-- Configuração por **arquivo** ou **variáveis de ambiente** (sem senha escrita no código).
+- **Agendar consulta** informando paciente, médico e horário (`HH:MM`); a consulta já entra
+  na posição certa da lista, ordenada por horário.
+- **Cancelar consulta** pelo nome do paciente.
+- **Fila de espera**: adicionar paciente, chamar o próximo (por ordem de chegada) e listar a fila.
+- **Histórico de operações** em pilha, do registro mais recente para o mais antigo.
+- **Relatório** com o total de consultas agendadas e de atendimentos realizados.
+- **Salvar e carregar** consultas e fila em um arquivo CSV.
+- Nomes com **espaços** (ex.: `Maria Souza`) funcionam normalmente.
+- Toda a memória alocada é liberada ao sair do programa.
 
 ## Requisitos
 
-| Item | Versão |
-|---|---|
-| Compilador C++17 | GCC 8+, Clang 7+, MSVC 2019+ ou MinGW-w64 |
-| [CMake](https://cmake.org/download/) | 3.14+ |
-| Cliente MariaDB/MySQL *(opcional)* | MariaDB Connector/C ou libmysqlclient |
-| Servidor MariaDB/MySQL *(opcional)* | qualquer versão recente |
+- Um compilador com suporte a **C++17**: GCC (`g++`), Clang ou MSVC.
 
-> O cliente MariaDB é **opcional**. Sem ele o programa compila normalmente e usa o modo CSV.
+Nenhuma biblioteca adicional é necessária.
 
-## Instalação e compilação
+## Compilação e execução
 
-### Linux
+### Linux e macOS
 
-Instale as dependências:
+```bash
+g++ -std=c++17 -Wall -Wextra -o clinica src/main.cpp
+./clinica
+```
+
+Para instalar o compilador, caso ainda não tenha:
 
 ```bash
 # Debian / Ubuntu / Mint
-sudo apt install build-essential cmake libmariadb-dev
+sudo apt install build-essential
 
 # Fedora
-sudo dnf install gcc-c++ cmake mariadb-connector-c-devel
+sudo dnf install gcc-c++
 
 # Arch / Manjaro
-sudo pacman -S base-devel cmake mariadb-libs
-```
+sudo pacman -S base-devel
 
-Compile e execute:
-
-```bash
-./build.sh
-./build/clinica
-```
-
-Opções do `build.sh`: `--sem-mariadb` (só CSV) e `--debug`.
-
-### macOS
-
-```bash
-brew install cmake mariadb-connector-c
-cmake -S . -B build -DMARIADB_DIR="$(brew --prefix mariadb-connector-c)"
-cmake --build build
-./build/clinica
+# macOS
+xcode-select --install
 ```
 
 ### Windows
 
-Escolha **uma** das opções de compilador:
-
-- **Visual Studio 2019+** (ou *Build Tools*), com a carga de trabalho *Desenvolvimento para desktop com C++*; ou
-- **MSYS2 / MinGW-w64**: `pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake`.
-
-Para o suporte a **MariaDB**, instale o
-[MariaDB Connector/C](https://mariadb.com/downloads/connectors/) (64 bits) ou use o vcpkg
-(`vcpkg install libmariadb:x64-windows`). O CMake procura em `C:\Program Files\MariaDB\...`
-automaticamente; se estiver em outro lugar, informe com `-DMARIADB_DIR="C:/caminho"`.
-
-Compile abrindo o **Developer Command Prompt** (Visual Studio) ou um terminal com `g++` no `PATH`:
+Com **MinGW-w64 / MSYS2** (`g++` no `PATH`):
 
 ```bat
-build.bat
+g++ -std=c++17 -Wall -Wextra -o clinica.exe src\main.cpp
+clinica.exe
 ```
 
-Para compilar **sem** MariaDB (apenas CSV): `build.bat sem-mariadb`.
-
-Execute:
+Com **Visual Studio** (*Developer Command Prompt*):
 
 ```bat
-build\Release\clinica.exe     :: Visual Studio
-build\clinica.exe             :: MinGW
+cl /EHsc /std:c++17 /utf-8 /Fe:clinica.exe src\main.cpp
+clinica.exe
 ```
 
-> Com o MariaDB Connector/C, copie `libmariadb.dll` (pasta `lib` do Connector) para ao lado do `clinica.exe`.
->
-> Use o **Windows Terminal** ou o PowerShell no Windows 10/11 para o melhor visual. Em consoles
-> antigos, se os símbolos `➔ ▲ ▼` aparecerem quebrados, rode com `--ascii`.
-
-## Configuração
-
-Valores padrão < arquivo `clinica.conf` < variáveis de ambiente. Para começar, copie o modelo:
-
-```bash
-cp config/clinica.conf.example clinica.conf      # Windows: copy config\clinica.conf.example clinica.conf
-```
-
-| Chave (`clinica.conf`) | Variável de ambiente | Padrão | Descrição |
-|---|---|---|---|
-| `storage` | `CLINICA_STORAGE` | automático | `mariadb` ou `csv` |
-| `db_host` | `CLINICA_DB_HOST` | `127.0.0.1` | Servidor do banco |
-| `db_port` | `CLINICA_DB_PORT` | `3306` | Porta |
-| `db_user` | `CLINICA_DB_USER` | `root` | Usuário |
-| `db_pass` | `CLINICA_DB_PASS` | *(vazio)* | Senha |
-| `db_name` | `CLINICA_DB_NAME` | `Sistema_de_Gerenciamento_de_consultas` | Nome do banco |
-| `csv_path` | `CLINICA_CSV` | `clinica_dados.csv` | Arquivo do modo CSV |
-| `ascii` | `CLINICA_ASCII` | `false` | Menu apenas com ASCII |
-
-Exemplo rápido por variável de ambiente:
-
-```bash
-CLINICA_DB_HOST=100.120.87.102 CLINICA_DB_PASS=minha_senha ./build/clinica    # Linux/macOS
-```
-```powershell
-$env:CLINICA_DB_PASS="minha_senha"; .\build\clinica.exe                        # PowerShell
-```
-
-**Linha de comando:** `--csv`, `--mariadb`, `--ascii`, `--versao`, `--ajuda`.
-
-> 🔒 Não faça commit do `clinica.conf` com a senha real (ele já está no `.gitignore`).
-
-## Banco de dados (MariaDB)
-
-**Opção 1 – Docker ou Podman** (já configurado neste repositório):
-
-```bash
-docker compose up -d          # ou: podman-compose up -d
-export CLINICA_DB_PASS=clinica123
-./build/clinica
-```
-
-**Opção 2 – servidor já instalado.** O programa cria o banco e as tabelas sozinho ao
-salvar pela primeira vez. Se preferir criar manualmente:
-
-```bash
-mariadb -u root -p < sql/schema.sql
-```
-
-| Tabela | Conteúdo |
-|---|---|
-| `pacientes` | Cadastro mestre (`id`, `nome`) |
-| `pilha_consultas` | Registros da pilha, do topo à base (ordem por `id_registro`) |
-| `fila_atendimento` | Registros da fila, na ordem de chamada |
-
-Salvar é **transacional**: se algo falhar no meio, o banco continua exatamente como estava.
+> **Atenção:** `CMakeLists.txt`, `build.sh` e `build.bat` ainda apontam para arquivos de uma
+> versão anterior do projeto (`menu.cpp`, `storage_*.cpp` etc.), que não existem mais, e por isso
+> **não compilam** no estado atual. Use os comandos acima.
 
 ## Como usar
 
-| Tecla | Ação |
+Digite o número da opção e pressione **Enter**. Os campos de texto também são confirmados com Enter.
+
+| Opção | Ação |
 |---|---|
-| `▲` / `▼` | Navegar no menu |
-| `Enter` | Confirmar |
-| `1`–`9` | Escolher a opção direto |
-| `Esc` | Voltar (nos submenus) |
+| `1` | Agendar consulta (pede paciente, médico e horário) |
+| `2` | Cancelar consulta (pede o nome do paciente) |
+| `3` | Mostrar consultas agendadas, em ordem de horário |
+| `4` | Adicionar paciente ao final da fila de espera |
+| `5` | Chamar o próximo paciente da fila (atender) |
+| `6` | Mostrar a fila de espera |
+| `7` | Gerar relatório |
+| `8` | Mostrar o histórico de operações |
+| `9` | Salvar dados no CSV |
+| `10` | Carregar dados do CSV |
+| `0` | Sair |
 
-Fluxo típico: **Adicionar Consulta** → **Gerenciar Fila** para enfileirar pacientes →
-**Salvar Dados**. Em outra sessão, **Carregar Dados** restaura pilha e fila na ordem correta.
+A barra de status mostra o número de consultas agendadas e de atendimentos feitos na sessão.
 
-Regras de cadastro: o **ID** tem até 20 caracteres, sem espaços; o **nome**, até 100 caracteres.
-Um mesmo ID não pode se repetir na mesma estrutura nem estar associado a nomes diferentes.
+Exemplo de agendamento:
 
-Formato do CSV (modo sem banco):
+```
+  Escolha uma opcao: 1
+  Nome do paciente: Maria Souza
+  Nome do medico:   Ana Lima
+  Horario (HH:MM):  14:30
+  Consulta agendada com sucesso!
+```
+
+Fluxo típico: **agendar** consultas, **adicionar** pacientes à fila e **chamar** o próximo conforme
+o atendimento avança. Antes de sair, use a opção **9** para salvar; em outra sessão, a opção **10**
+restaura os dados.
+
+## Arquivo CSV
+
+Os dados são gravados em `clinica_dados.csv`, na pasta de onde o programa foi executado. Cada linha
+começa com um prefixo que indica o tipo do registro:
+
+| Prefixo | Registro | Colunas |
+|---|---|---|
+| `C` | Consulta | `C,paciente,médico,horário` |
+| `F` | Paciente na fila | `F,nome` |
 
 ```csv
-estrutura,id,nome
-pilha,002,Maria Souza
-pilha,001,João da Silva
-fila,010,Ana Paula
+C,Joao Silva,Carlos Dias,09:00
+C,Maria Souza,Ana Lima,14:30
+F,Luiza Reis
 ```
+
+Ao **salvar**, o arquivo é sobrescrito. Ao **carregar**, as consultas e a fila em memória são
+substituídas pelo conteúdo do arquivo e o contador de atendimentos volta a zero.
 
 ## Estrutura do projeto
 
 ```
 .
-├── CMakeLists.txt            # build multiplataforma
-├── build.sh / build.bat      # atalhos de compilação (Linux·macOS / Windows)
-├── docker-compose.yml        # MariaDB pronto (Docker/Podman)
-├── config/clinica.conf.example
-├── sql/schema.sql            # esquema do banco
-└── src/
-    ├── main.cpp              # argumentos e escolha do armazenamento
-    ├── menu.h / menu.cpp     # interface e regras do menu
-    ├── estruturas.h          # Pilha e Fila (listas encadeadas)
-    ├── terminal.h / .cpp     # teclado e cores: Linux/macOS (termios) e Windows (conio)
-    ├── config.h / .cpp       # clinica.conf + variáveis de ambiente
-    ├── storage.h             # interface de persistência
-    ├── storage_mariadb.cpp   # MariaDB (statements preparados + transação)
-    └── storage_csv.cpp       # CSV (gravação atômica)
+├── src/
+│   └── main.cpp        # todo o programa: estruturas, menu e persistência em CSV
+├── CMakeLists.txt      # desatualizado (veja o aviso em "Compilação e execução")
+├── build.sh            # desatualizado
+├── build.bat           # desatualizado
+└── .gitignore
 ```
 
-## Estruturas de dados e eficiência
+O código de `src/main.cpp` é organizado em seções: nós das estruturas, variáveis globais (pontas
+das estruturas), funções auxiliares, consultas, fila, histórico, CSV e menu principal.
+
+## Estruturas de dados
+
+| Estrutura | Implementação | Uso no sistema |
+|---|---|---|
+| Lista duplamente encadeada (`inicio` / `fim`) | Nós `Consulta` com ponteiros `anterior` e `proximo` | Consultas agendadas, inseridas já ordenadas por horário |
+| Fila FIFO (`frente` / `tras`) | Nós `Paciente` com ponteiro `proximo` | Pacientes aguardando atendimento |
+| Pilha LIFO (`topo`) | Nós `Operacao` com ponteiro `proximo` | Histórico de operações da sessão |
 
 | Operação | Complexidade |
 |---|---|
-| Pilha: `push`, `pop`, `top` | O(1) |
-| Fila: `push_back` (enfileirar) | O(1) — mantém ponteiro para o último nó |
-| Fila: `pop_front`, `front` | O(1) |
-| `size()` das duas estruturas | O(1) |
+| Fila: enfileirar (`tras`) e chamar o próximo (`frente`) | O(1) |
+| Pilha: registrar uma operação (`topo`) | O(1) |
+| Consultas: agendar (busca da posição pelo horário) | O(n) |
+| Consultas: cancelar (busca pelo nome do paciente) | O(n) |
+| Listar consultas, fila ou histórico | O(n) |
 
-Detalhes de implementação:
+A memória é alocada com `new` e liberada com `delete`: ao cancelar, ao chamar o próximo da fila,
+ao carregar um CSV e ao encerrar o programa.
 
-- Memória gerenciada com `std::unique_ptr` (sem `new`/`delete` manual).
-- A liberação das listas é **iterativa**, evitando estouro de pilha com listas enormes
-  (testado com 1 milhão de registros carregados e liberados em menos de 1 s).
-- No banco, são usados **statements preparados** (protege contra SQL injection) e
-  **transações**; no CSV, a gravação usa arquivo temporário + renomeação.
+## Limitações conhecidas
+
+- **Horário no formato `HH:MM` com dois dígitos** (`09:00`, não `9:00`): a ordenação compara texto,
+  então `9:00` seria colocado depois de `14:30`. O programa não valida o horário nem rejeita
+  campos vazios.
+- **Não use vírgula em nomes.** O CSV não faz escape, então um nome como `Silva, Joao` é gravado
+  e lido de forma incorreta ao carregar.
+- **Cancelar** exige o nome do paciente **exatamente igual** ao cadastrado (diferencia maiúsculas
+  de minúsculas) e remove apenas a primeira consulta encontrada.
+- O **histórico de operações não é salvo** no CSV; ele existe apenas durante a sessão.
+- A opção **0** sai **sem pedir confirmação** nem salvar os dados. O mesmo acontece se for digitado
+  algo que não seja número no menu (uma letra, por exemplo): a entrada inválida é lida como `0` e o
+  programa encerra.
 
 ## Solução de problemas
 
 | Problema | Solução |
 |---|---|
-| `Cliente MariaDB não encontrado` no CMake | Instale o pacote de desenvolvimento (veja [Instalação](#instalação-e-compilação)) ou use `--sem-mariadb`. O programa continuará funcionando em modo CSV. |
-| `Can't connect to server on '...'` | Confirme `db_host`, `db_port` e se o servidor está ativo (`docker compose ps`). |
-| `Access denied for user` | Revise `db_user` / `db_pass`. |
-| Aparecem códigos como `←[36m` no Windows | Use o Windows Terminal/PowerShell atual. O programa já ativa as cores ANSI do console. |
-| Acentos ou símbolos quebrados no Windows | Use o Windows Terminal com fonte *Cascadia Mono* ou *Consolas*, ou rode com `--ascii`. |
-| `libmariadb.dll` não encontrada (Windows) | Copie a DLL do MariaDB Connector/C para a pasta do `clinica.exe`. |
+| `g++: command not found` | Instale um compilador C++ (veja [Compilação e execução](#compilação-e-execução)). |
+| `Arquivo 'clinica_dados.csv' nao encontrado ou vazio` | Salve primeiro com a opção `9`, e execute o programa na mesma pasta onde o arquivo foi gravado. |
+| `Cannot find source file: src/menu.cpp` ao usar CMake ou `build.sh` | Esses arquivos de build estão desatualizados; compile com `g++` conforme descrito acima. |
